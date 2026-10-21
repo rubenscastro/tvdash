@@ -1,0 +1,129 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+@font-face{font-family:Inter;src:url(/fonts/Inter.ttf);font-weight:100 900}
+html,body{margin:0;height:100%;background:transparent !important;overflow:hidden}
+#root{position:fixed;inset:0}
+body{font-family:Inter,system-ui,sans-serif;color:#fff}
+</style>
+<link rel="stylesheet" href="cards.css">
+<style>
+/* the home dock's glass (white 12% -> 8% at 127.2deg, no border) on every card, whatever the sky */
+html .card, html .dawn-ink .card, html .dawn-ink.card { background: linear-gradient(127.2deg, rgba(255,255,255,.12) 9.4%, rgba(255,255,255,.08) 91.3%) !important; border-color: transparent !important; box-shadow: none !important; }
+
+/* TV-size typography: bigger than the housedash originals */
+.card .text-5xl{font-size:3.75rem !important}
+.card .text-4xl{font-size:3rem !important}
+.card .label{font-size:.9rem !important}
+.card .text-xs{font-size:.9rem !important}
+.card .text-sm{font-size:1rem !important}
+.card .scale-90{transform:scale(1.2) !important}
+.card [style*="clamp(4rem"]{font-size:8rem !important}
+.card [style*="clamp(1.1rem"]{font-size:2.4rem !important}
+.card img[src*="astronaut"]{width:62% !important;right:-10% !important;top:10% !important}
+.card .label{color:rgba(255,255,255,.88) !important}
+.card .label.mt-1\.5{margin-top:-4px !important}
+.card .text-white\/60,.card .text-white\/65{color:rgba(255,255,255,.88) !important}
+.card .text-white\/40,.card .text-white\/45,.card .text-white\/50{color:rgba(255,255,255,.7) !important}
+/* simplified cards */
+.card:has(.text-5xl) .label,.card:has(.text-5xl) .flex.w-full.items-center.justify-between{display:none !important}
+.card:has(.text-5xl) .relative.z-10.flex-1{justify-content:center !important}
+.card:has(.text-5xl) .scale-90{transform:scale(1.2) translateX(-14px) !important}
+.card:has(.text-4xl) > .flex.items-center{display:none !important}
+.card:has(.text-4xl){justify-content:center !important}
+.card:has(.text-4xl) > .flex.flex-col{flex-direction:column-reverse !important}
+.card:has(.text-4xl) > .flex.flex-col > .mt-4{margin-top:0 !important;margin-bottom:14px !important}
+.card:has(img[src*="astronaut"]) .label{display:none !important}
+.card:has(img[src*="astronaut"]) .pb-4.mt-1{order:-1 !important;padding-bottom:0 !important;margin-top:0 !important}
+.card:has(.text-4xl) > .flex.flex-col{flex:1 !important;justify-content:space-between !important}
+.card:has(.text-4xl) > .flex.flex-col > .mt-4{margin-bottom:0 !important}
+.card:has(img[src*="astronaut"]){padding-bottom:22px !important}
+.card:has(.text-4xl) .text-4xl{font-size:3rem !important;opacity:1 !important}
+.card .kwh-unit{font-size:1.5rem;opacity:.5;font-weight:800}
+.card:has(.text-4xl) > .flex.flex-col{flex-direction:column !important}
+.card:has(.text-4xl) > .flex.flex-col > .mt-4{margin-top:0 !important}
+.card:has(.text-4xl) .text-4xl{display:flex !important;align-items:center !important}
+.card:has(.text-4xl) .text-4xl::before{content:"";flex:none;width:2.6rem;height:2.6rem;margin-right:.5rem;background:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23facc15' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z'/></svg>") no-repeat center/contain}
+.card:has(.text-4xl) .text-4xl{align-items:baseline !important}
+.card:has(.text-4xl) .text-4xl::before{width:1.8rem !important;height:1.8rem !important;align-self:center}
+.card .kwh-unit{margin-left:.25rem}
+.card:has(.text-5xl){padding-top:.3rem !important;padding-bottom:.3rem !important}
+.card:has(.text-5xl){padding-left:1.5rem !important;padding-right:1.5rem !important;padding-top:.45rem !important;padding-bottom:.45rem !important}
+.card:has(.text-4xl){padding:1.875rem !important}
+.card:has(img[src*="astronaut"]){padding:1.875rem 1.875rem 33px !important}
+.card:has(.text-5xl){padding-top:.45rem !important;padding-bottom:.45rem !important;min-height:0 !important}
+.card:has(.text-4xl){min-height:140px !important;padding-top:1.4rem !important;padding-bottom:1.4rem !important}
+.card .text-5xl{font-size:3.19rem !important}
+.card:has(.text-4xl) .text-4xl{font-size:2.55rem !important}
+.card:has(.text-5xl){padding-top:.9rem !important;padding-bottom:.9rem !important}
+@keyframes cardin{from{opacity:0;transform:translateX(56px)}to{opacity:1;transform:none}}
+#root.go .card{animation:cardin 650ms cubic-bezier(.16,.84,.3,1) both}
+#root.go .card:nth-child(1){animation-delay:0ms}
+#root.go .card:nth-child(2){animation-delay:120ms}
+#root.go .card:nth-child(3){animation-delay:240ms}
+.card .text-5xl{font-size:2.8rem !important;font-weight:700 !important}
+.card:has(.text-4xl) .text-4xl{font-size:2.25rem !important;font-weight:700 !important}
+.card .kwh-unit{font-weight:700 !important}
+.card:has(img[src*="astronaut"]) span.text-white\/70{font-size:1.5rem !important;opacity:.5 !important;font-weight:700 !important;margin-left:.25rem !important;color:#fff !important}
+#root:not(.go) .card{opacity:0}
+.card:has(.text-4xl){min-height:110px !important;padding-top:1.1rem !important;padding-bottom:1.1rem !important}
+.card:has(.text-4xl) .text-4xl::before{display:none !important}
+.card:has(.text-4xl){position:relative !important}
+.card:has(.text-4xl) > .flex.flex-col{position:relative !important;flex:none !important;justify-content:center !important}
+.card:has(.text-4xl) .mt-4 .flex-1,.card:has(.text-4xl) .mt-4 span.min-w-\[32px\]{display:none !important}
+.card:has(.text-4xl) > .flex.flex-col > .mt-4{position:absolute !important;right:0 !important;bottom:.2rem !important;top:auto !important;width:auto !important;margin:0 !important}
+.card:has(.text-4xl) .mt-4 > div{width:auto !important}
+.card:has(.text-4xl)::before{content:"";position:absolute;top:1rem;left:1.875rem;width:1.1rem;height:1.1rem;background:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23facc15' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z'/></svg>") no-repeat center/contain}
+.card .text-5xl{letter-spacing:-.05em !important}
+.card:has(.text-5xl){padding-top:2.4rem !important;padding-bottom:2.4rem !important}
+.card:has(.text-4xl)::before{display:none !important}
+.card:has(.text-4xl) .text-4xl::before{display:block !important;content:"";flex:none;width:1.8rem;height:1.8rem;margin-right:.5rem;align-self:center;background:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23facc15' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z'/></svg>") no-repeat center/contain !important}
+.card:has(.text-4xl) .text-4xl::before{width:1.3rem !important;height:1.3rem !important}
+.card:has(img[src*="astronaut"]) .font-black{letter-spacing:-.05em !important}
+/* dawn (housedash): light glass and dark ink */
+html .dawn-ink .card,html .dawn-ink.card{background:var(--card-glow,linear-gradient(transparent,transparent)),linear-gradient(160deg,rgba(255,255,255,.42),rgba(255,255,255,.30)) !important}
+.dawn-ink .card .label{color:#64748b !important}
+.dawn-ink .card .text-white{color:#334155 !important}
+.dawn-ink .card [class*="text-white/"]{color:#64748b !important}
+.dawn-ink .card .kwh-unit,.dawn-ink .card:has(img[src*="astronaut"]) span.text-white\/70{color:#334155 !important}
+.dawn-ink .card .text-5xl,.dawn-ink .card .text-4xl{color:#334155 !important}
+.card:has(img[src*="taurus-sentado"]) .text-base{font-size:1.1rem !important}
+.card img[src*="taurus-sentado"]{width:56% !important}
+/* the weather card's sun at dawn / dusk: 20 px to the left (the column is zoomed ~0.62, so 32 css px) */
+.p-dawn .card div[aria-hidden].absolute.pointer-events-none.flex,.p-dusk .card div[aria-hidden].absolute.pointer-events-none.flex{margin-right:32px}
+.card:has(.text-5xl){height:123.2px !important;min-height:123.2px !important;max-height:123.2px !important;box-sizing:border-box !important;overflow:hidden}
+.card:has(img[src*="dormindo"]){justify-content:flex-start !important;padding:1.875rem 1.875rem 1.2rem !important}
+.card:has(img[src*="dormindo"]) .text-lg{order:-1 !important;margin-bottom:.6rem !important;margin-top:0 !important}
+.card img[src*="dormindo"]{width:56% !important}
+.card .taurus-two{font-size:6.8rem !important}
+</style></head>
+<body><div id="root"></div>
+<script>
+window.setTables = function(t){ window.__tables = t; };  // replaced by the bundle
+</script>
+<script>
+var __last=0;window.enter=function(){var n=Date.now();if(n-__last<900)return;__last=n;var r=document.getElementById('root');r.classList.remove('go');clearTimeout(window.__et);window.__et=setTimeout(function(){void r.offsetWidth;r.classList.add('go');},500);};
+</script><script src="cards.js"></script><script>
+// robust "kWh" split: any text node ending in kWh inside a .text-4xl
+(function(){
+  var busy=false;
+  function run(){
+    busy=true;
+    document.querySelectorAll('.text-4xl').forEach(function(el){
+      var w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null), n;
+      while((n=w.nextNode())){
+        if(n.parentNode.classList&&n.parentNode.classList.contains('kwh-unit')) continue;
+        var m=/^(.*?)(\s*kWh)$/.exec(n.nodeValue);
+        if(m){ var t=m[1]?n.splitText(m[1].length):n; var sp=document.createElement('span'); sp.className='kwh-unit'; sp.textContent=t.nodeValue; t.parentNode.replaceChild(sp,t); break; }
+      }
+    });
+    setTimeout(function(){busy=false;},0);
+  }
+  run(); setInterval(function(){ if(!busy) run(); },400); new MutationObserver(function(){ if(!busy) run(); }).observe(document.documentElement,{subtree:true,childList:true,characterData:true});
+})();
+</script><script>
+// first appearance: wait until the three cards exist and have their final size, then slide them in
+(function(){var t=setInterval(function(){var c=document.querySelectorAll('#root .card');if(c.length>=3){clearInterval(t);requestAnimationFrame(function(){requestAnimationFrame(function(){window.enter&&window.enter();});});}},100);})();
+</script><script>
+// next meal under 1 h and over 9 min (two-digit minutes): the number a little smaller
+setInterval(function(){document.querySelectorAll('.card span[style*="clamp(4rem"]').forEach(function(e){e.classList.toggle('taurus-two',/^\d{2}$/.test(e.textContent.trim()));});},400);
+</script></body></html>

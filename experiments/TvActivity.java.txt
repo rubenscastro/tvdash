@@ -1,0 +1,294 @@
+package com.ansub.tvhome;
+
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.database.Cursor;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.media.tv.TvContract;
+import android.media.tv.TvInputInfo;
+import android.media.tv.TvInputManager;
+import android.media.tv.TvView;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.Gravity;
+import android.view.KeyEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+// Our own antenna screen: a full-screen TvView on the TV's tuner input, with a small channel
+// banner and a channel list. If the channel list can't be read, it hands over to the TV's own app.
+public class TvActivity extends Activity {
+    private static final String PREFS = "tvhome", LAST = "last_channel";
+    private static final int LIST_ROWS = 11;
+
+    private static class Channel {
+        long id; String number; String name; double sort;
+    }
+
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final List<Channel> channels = new ArrayList<>();
+    private String inputId;
+    private int current = -1;
+    private TvView tv;
+    private LinearLayout banner;
+    private TextView bannerNumber, bannerName, status, digits;
+    private LinearLayout listPanel;
+    private final List<TextView> rows = new ArrayList<>();
+    private String debug = "";
+    private boolean listOpen;
+    private int listSel;
+    private final StringBuilder typed = new StringBuilder();
+    private final Runnable hideBanner = () -> banner.setVisibility(View.GONE);
+    private final Runnable applyTyped = this::tuneTyped;
+
+    // The tuner input built into the TV (ids look like .../HW2); other apps also list tuner-type inputs.
+    static String tunerInputId(Context c) {
+        TvInputManager tim = (TvInputManager) c.getSystemService(Context.TV_INPUT_SERVICE);
+        if (tim == null) return null;
+        String fallback = null;
+        for (TvInputInfo in : tim.getTvInputList()) {
+            if (in.getType() != TvInputInfo.TYPE_TUNER || in.getParentId() != null) continue;
+            if (in.getId().contains("/HW")) return in.getId();
+            if (fallback == null) fallback = in.getId();
+        }
+        return fallback;
+    }
+
+    // The TV's own antenna app, opened on the tuner's channels. Used when ours can't work.
+    static void openStockTv(Context c, String inputId) {
+        Intent view = new Intent(Intent.ACTION_VIEW, TvContract.buildChannelsUriForInput(inputId));
+        List<Intent> tries = new ArrayList<>();
+        tries.add(new Intent(view).setClassName("com.tcl.tv", "com.tcl.player.TVActivity"));
+        tries.add(new Intent(view).setClassName("com.android.tv", "com.android.tv.MainActivity"));
+        tries.add(view);
+        for (Intent i : tries) {
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            try { c.startActivity(i); return; } catch (Exception ignored) {}
+        }
+    }
+
+    @Override protected void onCreate(Bundle b) {
+        super.onCreate(b);
+        inputId = tunerInputId(this);
+        android.util.Log.e("tvhome", "TvActivity onCreate input=" + inputId);
+        if (inputId != null) loadChannels();
+        if (inputId == null || channels.isEmpty()) {
+            TextView t = label(26, Color.WHITE, false);
+            t.setSingleLine(false);
+            t.setPadding(dp(60), dp(60), dp(60), dp(60));
+            t.setText("DEBUG input=" + inputId + "\n" + debug);
+            setContentView(t);
+            return;
+        }
+        buildUi();
+        int start = 0;
+        long last = getSharedPreferences(PREFS, 0).getLong(LAST, -1);
+        for (int i = 0; i < channels.size(); i++) if (channels.get(i).id == last) start = i;
+        tune(start);
+    }
+
+    private void loadChannels() {
+        String[] cols = {TvContract.Channels._ID, TvContract.Channels.COLUMN_DISPLAY_NUMBER,
+                TvContract.Channels.COLUMN_DISPLAY_NAME, TvContract.Channels.COLUMN_INPUT_ID};
+        Cursor c = null;
+        try {
+            c = getContentResolver().query(TvContract.Channels.CONTENT_URI, cols, null, null, null);
+        } catch (Exception e) {
+            debug += "query failed: " + e + "\n";
+        }
+        if (c == null) { debug += "query null\n"; return; }
+        debug += "rows all inputs: " + c.getCount() + "\n";
+        try {
+            while (c.moveToNext()) {
+                if (!inputId.equals(c.getString(3))) continue;
+                Channel ch = new Channel();
+                ch.id = c.getLong(0);
+                ch.number = c.getString(1) == null ? "" : c.getString(1);
+                ch.name = c.getString(2) == null ? "" : c.getString(2);
+                ch.sort = parseNumber(ch.number);
+                channels.add(ch);
+            }
+        } finally { c.close(); }
+        Collections.sort(channels, (a, x) -> Double.compare(a.sort, x.sort));
+        android.util.Log.e("tvhome", "channels loaded: " + channels.size());
+    }
+
+    // "7" -> 7, "7.2" or "7-2" -> 7.2, anything else sorts last.
+    private static double parseNumber(String n) {
+        try { return Double.parseDouble(n.replace('-', '.').trim()); } catch (Exception e) { return 1e9; }
+    }
+
+    private int dp(int v) { return (int) (v * getResources().getDisplayMetrics().density + 0.5f); }
+
+    private TextView label(int sp, int color, boolean bold) {
+        TextView t = new TextView(this);
+        t.setTextSize(sp);
+        t.setTextColor(color);
+        t.setTypeface(Typeface.create("sans-serif", bold ? Typeface.BOLD : Typeface.NORMAL));
+        t.setSingleLine(true);
+        return t;
+    }
+
+    private void buildUi() {
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(Color.BLACK);
+        tv = new TvView(this);
+        root.addView(tv, new FrameLayout.LayoutParams(-1, -1));
+        tv.setCallback(new TvView.TvInputCallback() {
+            @Override public void onVideoAvailable(String id) { status.setVisibility(View.GONE); }
+            @Override public void onVideoUnavailable(String id, int reason) {
+                status.setText(reason == TvInputManager.VIDEO_UNAVAILABLE_REASON_TUNING ? "" : "Sem sinal");
+                status.setVisibility(status.length() == 0 ? View.GONE : View.VISIBLE);
+            }
+            @Override public void onConnectionFailed(String id) { openStockTv(TvActivity.this, id); finish(); }
+        });
+
+        status = label(28, 0xE0FFFFFF, false);
+        status.setVisibility(View.GONE);
+        root.addView(status, new FrameLayout.LayoutParams(-2, -2, Gravity.CENTER));
+
+        banner = new LinearLayout(this);
+        banner.setOrientation(LinearLayout.HORIZONTAL);
+        banner.setGravity(Gravity.CENTER_VERTICAL);
+        banner.setPadding(dp(28), dp(16), dp(36), dp(16));
+        banner.setBackground(glass(0xCC101012, dp(14)));
+        bannerNumber = label(34, Color.WHITE, true);
+        bannerName = label(26, 0xE0FFFFFF, false);
+        bannerName.setPadding(dp(20), 0, 0, 0);
+        banner.addView(bannerNumber);
+        banner.addView(bannerName);
+        FrameLayout.LayoutParams bl = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.START);
+        bl.setMargins(dp(48), 0, 0, dp(48));
+        root.addView(banner, bl);
+
+        digits = label(60, Color.WHITE, true);
+        digits.setVisibility(View.GONE);
+        FrameLayout.LayoutParams dl = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.END);
+        dl.setMargins(0, dp(40), dp(56), 0);
+        root.addView(digits, dl);
+
+        listPanel = new LinearLayout(this);
+        listPanel.setOrientation(LinearLayout.VERTICAL);
+        listPanel.setPadding(dp(16), dp(16), dp(16), dp(16));
+        listPanel.setBackground(glass(0xE6101012, dp(18)));
+        listPanel.setVisibility(View.GONE);
+        for (int i = 0; i < LIST_ROWS; i++) {
+            TextView r = label(24, 0xE0FFFFFF, false);
+            r.setPadding(dp(20), dp(10), dp(20), dp(10));
+            rows.add(r);
+            listPanel.addView(r, new LinearLayout.LayoutParams(dp(420), -2));
+        }
+        FrameLayout.LayoutParams ll = new FrameLayout.LayoutParams(-2, -2, Gravity.END | Gravity.CENTER_VERTICAL);
+        ll.setMargins(0, 0, dp(48), 0);
+        root.addView(listPanel, ll);
+        setContentView(root, new ViewGroup.LayoutParams(-1, -1));
+    }
+
+    private GradientDrawable glass(int color, int radius) {
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(color);
+        g.setCornerRadius(radius);
+        return g;
+    }
+
+    private void tune(int index) {
+        if (channels.isEmpty()) return;
+        current = (index % channels.size() + channels.size()) % channels.size();
+        Channel ch = channels.get(current);
+        tv.tune(inputId, TvContract.buildChannelUri(ch.id));
+        getSharedPreferences(PREFS, 0).edit().putLong(LAST, ch.id).apply();
+        showBanner();
+    }
+
+    private void showBanner() {
+        Channel ch = channels.get(current);
+        bannerNumber.setText(ch.number);
+        bannerName.setText(ch.name);
+        banner.setVisibility(View.VISIBLE);
+        handler.removeCallbacks(hideBanner);
+        handler.postDelayed(hideBanner, 3500);
+    }
+
+    private void tuneTyped() {
+        String want = typed.toString();
+        typed.setLength(0);
+        digits.setVisibility(View.GONE);
+        for (int i = 0; i < channels.size(); i++)
+            if (channels.get(i).number.equals(want) || parseNumber(channels.get(i).number) == parseNumber(want)) {
+                tune(i);
+                return;
+            }
+    }
+
+    private void openList(boolean open) {
+        listOpen = open;
+        listPanel.setVisibility(open ? View.VISIBLE : View.GONE);
+        if (open) { listSel = current; drawList(); }
+    }
+
+    private void drawList() {
+        int first = Math.max(0, Math.min(listSel - LIST_ROWS / 2, channels.size() - LIST_ROWS));
+        for (int i = 0; i < LIST_ROWS; i++) {
+            TextView r = rows.get(i);
+            int idx = first + i;
+            if (idx >= channels.size()) { r.setVisibility(View.GONE); continue; }
+            r.setVisibility(View.VISIBLE);
+            Channel ch = channels.get(idx);
+            r.setText(ch.number + "   " + ch.name);
+            boolean sel = idx == listSel;
+            r.setBackground(sel ? glass(0x38FFFFFF, dp(10)) : null);
+            r.setTextColor(sel ? Color.WHITE : 0xB0FFFFFF);
+        }
+    }
+
+    @Override public boolean onKeyDown(int code, KeyEvent ev) {
+        if (channels.isEmpty()) return super.onKeyDown(code, ev);
+        boolean up = code == KeyEvent.KEYCODE_CHANNEL_UP || code == KeyEvent.KEYCODE_PAGE_UP;
+        boolean down = code == KeyEvent.KEYCODE_CHANNEL_DOWN || code == KeyEvent.KEYCODE_PAGE_DOWN;
+        if (listOpen) {
+            if (code == KeyEvent.KEYCODE_DPAD_UP || up) listSel = Math.max(0, listSel - (up ? LIST_ROWS : 1));
+            else if (code == KeyEvent.KEYCODE_DPAD_DOWN || down) listSel = Math.min(channels.size() - 1, listSel + (down ? LIST_ROWS : 1));
+            else if (code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER) { openList(false); tune(listSel); return true; }
+            else if (code == KeyEvent.KEYCODE_BACK || code == KeyEvent.KEYCODE_DPAD_LEFT) { openList(false); return true; }
+            else return super.onKeyDown(code, ev);
+            drawList();
+            return true;
+        }
+        if (code == KeyEvent.KEYCODE_DPAD_UP || up) { tune(current + 1); return true; }
+        if (code == KeyEvent.KEYCODE_DPAD_DOWN || down) { tune(current - 1); return true; }
+        if (code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER || code == KeyEvent.KEYCODE_DPAD_RIGHT
+                || code == KeyEvent.KEYCODE_GUIDE || code == KeyEvent.KEYCODE_TV_INPUT_HDMI_1 && false) {
+            openList(true);
+            return true;
+        }
+        if (code == KeyEvent.KEYCODE_INFO || code == KeyEvent.KEYCODE_MENU || code == KeyEvent.KEYCODE_DPAD_LEFT) { showBanner(); return true; }
+        if (code >= KeyEvent.KEYCODE_0 && code <= KeyEvent.KEYCODE_9 && typed.length() < 4) {
+            typed.append((char) ('0' + code - KeyEvent.KEYCODE_0));
+            digits.setText(typed.toString());
+            digits.setVisibility(View.VISIBLE);
+            handler.removeCallbacks(applyTyped);
+            handler.postDelayed(applyTyped, 1600);
+            return true;
+        }
+        if (code == KeyEvent.KEYCODE_BACK) { finish(); return true; }
+        return super.onKeyDown(code, ev);
+    }
+
+    @Override protected void onStop() {
+        super.onStop();
+        handler.removeCallbacksAndMessages(null);
+        finish(); // leaving (Home, another app) releases the tuner
+    }
+}

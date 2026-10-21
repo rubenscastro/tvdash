@@ -1,0 +1,22 @@
+.DS_Store
+node_modules/
+out/
+*.apk
+*.jks
+.env
+.env.*
+
+# secrets: the tv-home URL carries the TV's access key. Copy app/assets/tvhome.cfg.example and fill it in.
+app/assets/tvhome.cfg
+
+# device identifiers and private data snapshots
+backup/settings_*.txt
+cards/tables.json
+cards/dist/*
+!cards/dist/index.html
+cards/meta.json
+cerberus-tv/meta.json
+house3d/dist/
+
+# a local copy of the upstream clone's git history (see README)
+app/.git-upstream/

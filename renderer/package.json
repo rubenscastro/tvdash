@@ -1,0 +1,1 @@
+{ "name": "housedash-renderer", "version": "1.0.0", "type": "module", "dependencies": { "puppeteer-core": "23.11.1" } }

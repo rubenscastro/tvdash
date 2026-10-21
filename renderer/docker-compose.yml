@@ -1,0 +1,25 @@
+# Draws the 3D house for the TV (housedash scene, headless Chromium with software WebGL) and writes house.jpg + house.json
+# next to the tv-home function, which serves them. Rollback: `docker compose down && rm -rf /opt/housedash-renderer`.
+services:
+  housedash-renderer:
+    build: .
+    image: housedash-renderer:local
+    container_name: housedash-renderer
+    restart: unless-stopped
+    shm_size: "1gb"
+    environment:
+      SYNC_URL: http://supabase-kong:8000/functions/v1/tv-home
+      TV_HOME_KEY: ${TV_HOME_KEY}
+      OUT_DIR: /out
+    volumes:
+      - /opt/supabase/volumes/functions/tv-home:/out
+    networks:
+      - supabase_default
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 3g
+networks:
+  supabase_default:
+    external: true
