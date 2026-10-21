@@ -203,3 +203,4 @@ Tue Oct 20 13:06:39 -03 2026 TV Camara Sorocaba logo replaced (camara_sorocaba)
 2026-10-20 18:25:22 channel list: on the Principais/Todos control, left/right only switch between those two (no categories)
 2026-10-20 20:07:50 channel list: left on Principais closes the list; opening on a non-main channel selects its category; 41 internet/antenna logos added (iptv-org database, verified visually; rest still without logo); TvActivity releases the tuner session on stop (tv.reset) — audio bug cause not reproduced
 2026-10-21 14:36:00 code moved from ~/tv-detox-work to /Users/Shared/Projects/personal/tvdash (repo->app, tools/, data/); README added; builds checked. Screenshots/videos stay in ~/tv-detox-work
+2026-10-21 15:11:12 pushed initial commit to https://github.com/rubenscastro/tvdash (private); secrets excluded via .gitignore (tvhome.cfg, key.jks, backup/settings_*, cards/tables.json)
